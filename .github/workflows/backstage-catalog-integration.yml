@@ -54,7 +54,7 @@ jobs:
         id: check-catalog
         run: |
           DEFAULT_BRANCH="${{ steps.default-branch.outputs.branch }}"
-          CATALOG_PATH="${{ inputs.catalog_file_path }}"
+          CATALOG_PATH="${{ inputs.catalog_file_path || 'catalog.yaml' }}"
 
           # Checkout the default branch to check for catalog file
           git checkout ${DEFAULT_BRANCH}
@@ -74,7 +74,7 @@ jobs:
           # Get repository name without owner
           REPO_NAME="${GITHUB_REPOSITORY##*/}"
           BRANCH_NAME="${REPO_NAME}-backstage-integration"
-          CATALOG_PATH="${{ inputs.catalog_file_path }}"
+          CATALOG_PATH="${{ inputs.catalog_file_path || 'catalog.yaml' }}"
           DEFAULT_BRANCH="${{ steps.default-branch.outputs.branch }}"
 
           # Configure git
