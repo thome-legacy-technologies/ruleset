@@ -1,6 +1,7 @@
 name: Backstage Catalog Integration
 
 on:
+  pull_request:
   workflow_call:
     inputs:
       catalog_file_path:
@@ -85,6 +86,7 @@ jobs:
             CATALOG_PATH="catalog.yaml"
           fi
           
+
           DEFAULT_BRANCH="${{ steps.default-branch.outputs.branch }}"
 
           # Configure git
