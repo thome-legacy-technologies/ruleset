@@ -1,6 +1,7 @@
 name: Backstage Catalog Integration
 
 on:
+  pull_request:
   workflow_call:
     inputs:
       catalog_file_path:
