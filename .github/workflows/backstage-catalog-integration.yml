@@ -1,0 +1,164 @@
+name: Backstage Catalog Integration
+
+on:
+  workflow_call:
+    inputs:
+      catalog_file_path:
+        description: 'Path to the catalog.yaml file'
+        required: false
+        default: 'catalog.yaml'
+        type: string
+      catalog_content:
+        description: 'Content for the catalog.yaml file (if not provided, uses default template)'
+        required: false
+        type: string
+      base_branch:
+        description: 'Base branch to check and create PR against (main or master)'
+        required: false
+        default: 'main'
+        type: string
+    secrets:
+      GH_TOKEN:
+        description: 'GitHub token for creating PR'
+        required: false
+
+jobs:
+  create-backstage-catalog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Determine default branch
+        id: default-branch
+        run: |
+          # Try to determine the default branch
+          DEFAULT_BRANCH="${{ inputs.base_branch }}"
+
+          # Check if main exists
+          if git rev-parse --verify origin/main >/dev/null 2>&1; then
+            DEFAULT_BRANCH="main"
+          # Check if master exists
+          elif git rev-parse --verify origin/master >/dev/null 2>&1; then
+            DEFAULT_BRANCH="master"
+          fi
+
+          echo "branch=${DEFAULT_BRANCH}" >> $GITHUB_OUTPUT
+          echo "Using default branch: ${DEFAULT_BRANCH}"
+
+      - name: Check if catalog.yaml exists
+        id: check-catalog
+        run: |
+          DEFAULT_BRANCH="${{ steps.default-branch.outputs.branch }}"
+          CATALOG_PATH="${{ inputs.catalog_file_path }}"
+
+          # Checkout the default branch to check for catalog file
+          git checkout ${DEFAULT_BRANCH}
+
+          if [ -f "${CATALOG_PATH}" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Catalog file already exists in ${DEFAULT_BRANCH} branch"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Catalog file does not exist in ${DEFAULT_BRANCH} branch"
+          fi
+
+      - name: Create branch and catalog file
+        if: steps.check-catalog.outputs.exists == 'false'
+        id: create-catalog
+        run: |
+          # Get repository name without owner
+          REPO_NAME="${GITHUB_REPOSITORY##*/}"
+          BRANCH_NAME="${REPO_NAME}-backstage-integration"
+          CATALOG_PATH="${{ inputs.catalog_file_path }}"
+          DEFAULT_BRANCH="${{ steps.default-branch.outputs.branch }}"
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Ensure we're on the default branch
+          git checkout ${DEFAULT_BRANCH}
+
+          # Check if branch already exists
+          if git rev-parse --verify origin/${BRANCH_NAME} >/dev/null 2>&1; then
+            echo "Branch ${BRANCH_NAME} already exists, checking it out"
+            git checkout ${BRANCH_NAME}
+          else
+            echo "Creating new branch ${BRANCH_NAME}"
+            git checkout -b ${BRANCH_NAME}
+          fi
+
+          # Create catalog.yaml with provided content or default template
+          if [ -n "${{ inputs.catalog_content }}" ]; then
+            echo "${{ inputs.catalog_content }}" > ${CATALOG_PATH}
+          else
+            # Create default catalog.yaml content
+            cat > ${CATALOG_PATH} <<EOF
+          apiVersion: backstage.io/v1alpha1
+          kind: Component
+          metadata:
+            name: ${REPO_NAME}
+            description: ${REPO_NAME} component
+            annotations:
+              github.com/project-slug: ${GITHUB_REPOSITORY}
+          spec:
+            type: service
+            lifecycle: production
+            owner: team
+          EOF
+          fi
+
+          # Add and commit the file
+          git add ${CATALOG_PATH}
+          git commit -m "Add Backstage catalog.yaml for ${REPO_NAME}"
+
+          # Push the branch
+          git push origin ${BRANCH_NAME}
+
+          echo "branch=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+          echo "catalog_path=${CATALOG_PATH}" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        if: steps.check-catalog.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          REPO_NAME="${GITHUB_REPOSITORY##*/}"
+          BRANCH_NAME="${{ steps.create-catalog.outputs.branch }}"
+          DEFAULT_BRANCH="${{ steps.default-branch.outputs.branch }}"
+          CATALOG_PATH="${{ steps.create-catalog.outputs.catalog_path }}"
+
+          # Create PR using GitHub CLI
+          PR_BODY="This PR adds a Backstage catalog.yaml file for ${REPO_NAME}.
+
+          This file enables integration with Backstage for better service catalog management.
+
+          **Changes:**
+          - Added \`${CATALOG_PATH}\` with basic component metadata
+
+          **Next Steps:**
+          - Review and update the metadata as needed
+          - Update owner and team information
+          - Add any additional annotations or tags"
+
+          gh pr create \
+            --title "Add Backstage catalog.yaml" \
+            --body "${PR_BODY}" \
+            --base ${DEFAULT_BRANCH} \
+            --head ${BRANCH_NAME}
+
+      - name: Workflow Summary
+        run: |
+          if [ "${{ steps.check-catalog.outputs.exists }}" == "true" ]; then
+            echo "## ✅ Catalog file already exists" >> $GITHUB_STEP_SUMMARY
+            echo "The catalog.yaml file already exists in the default branch. No action needed." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## 🎉 Pull Request Created" >> $GITHUB_STEP_SUMMARY
+            echo "Branch: \`${{ steps.create-catalog.outputs.branch }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "Catalog File: \`${{ steps.create-catalog.outputs.catalog_path }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "A pull request has been created to add the Backstage catalog.yaml file." >> $GITHUB_STEP_SUMMARY
+          fi

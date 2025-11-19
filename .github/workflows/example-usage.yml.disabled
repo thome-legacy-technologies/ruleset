@@ -1,0 +1,44 @@
+# Example: How to use the Backstage Catalog Integration workflow
+# 
+# To use this workflow:
+# 1. Copy this file to your repository's .github/workflows/ directory
+# 2. Rename it (remove the .disabled extension)
+# 3. Adjust the configuration as needed
+# 4. Run it manually or on a schedule
+
+name: Setup Backstage Catalog
+
+on:
+  workflow_dispatch:  # Allows manual triggering from GitHub UI
+  # Uncomment to run on a schedule (e.g., weekly check)
+  # schedule:
+  #   - cron: '0 0 * * 0'  # Every Sunday at midnight UTC
+
+jobs:
+  setup-catalog:
+    # Call the reusable workflow from the ruleset repository
+    uses: thome-legacy-technologies/ruleset/.github/workflows/backstage-catalog-integration.yml@main
+    # If you want to use a specific version/tag instead of main:
+    # uses: thome-legacy-technologies/ruleset/.github/workflows/backstage-catalog-integration.yml@v1.0.0
+    
+    # Optional: Customize the inputs
+    # with:
+    #   catalog_file_path: 'catalog.yaml'  # Default location
+    #   base_branch: 'main'  # Default branch to check
+    #   # Uncomment to provide custom catalog content:
+    #   # catalog_content: |
+    #   #   apiVersion: backstage.io/v1alpha1
+    #   #   kind: Component
+    #   #   metadata:
+    #   #     name: my-custom-service
+    #   #     description: My custom service description
+    #   #   spec:
+    #   #     type: service
+    #   #     lifecycle: production
+    #   #     owner: my-team
+    
+    # Pass the GitHub token for PR creation
+    secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Or use a custom PAT with broader permissions if needed:
+      # GH_TOKEN: ${{ secrets.CUSTOM_GITHUB_TOKEN }}
