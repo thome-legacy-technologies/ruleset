@@ -54,7 +54,12 @@ jobs:
         id: check-catalog
         run: |
           DEFAULT_BRANCH="${{ steps.default-branch.outputs.branch }}"
-          CATALOG_PATH="${{ inputs.catalog_file_path || 'catalog.yaml' }}"
+          CATALOG_PATH="${{ inputs.catalog_file_path }}"
+          
+          # Default to catalog.yaml if CATALOG_PATH is empty
+          if [ -z "${CATALOG_PATH}" ]; then
+            CATALOG_PATH="catalog.yaml"
+          fi
 
           # Checkout the default branch to check for catalog file
           git checkout ${DEFAULT_BRANCH}
@@ -74,7 +79,14 @@ jobs:
           # Get repository name without owner
           REPO_NAME="${GITHUB_REPOSITORY##*/}"
           BRANCH_NAME="${REPO_NAME}-backstage-integration"
-          CATALOG_PATH="${{ inputs.catalog_file_path || 'catalog.yaml' }}"
+          CATALOG_PATH="${{ inputs.catalog_file_path }}"
+          
+          # Default to catalog.yaml if CATALOG_PATH is empty
+          if [ -z "${CATALOG_PATH}" ]; then
+            CATALOG_PATH="catalog.yaml"
+          fi
+          
+
           DEFAULT_BRANCH="${{ steps.default-branch.outputs.branch }}"
 
           # Configure git
@@ -95,10 +107,10 @@ jobs:
 
           # Create catalog.yaml with provided content or default template
           if [ -n "${{ inputs.catalog_content }}" ]; then
-            echo "${{ inputs.catalog_content }}" > ${CATALOG_PATH}
+            echo "${{ inputs.catalog_content }}" > "${CATALOG_PATH}"
           else
             # Create default catalog.yaml content
-            cat > ${CATALOG_PATH} <<EOF
+            cat > "${CATALOG_PATH}" <<EOF
           apiVersion: backstage.io/v1alpha1
           kind: Component
           metadata:
@@ -114,7 +126,7 @@ jobs:
           fi
 
           # Add and commit the file
-          git add ${CATALOG_PATH}
+          git add "${CATALOG_PATH}"
           git commit -m "Add Backstage catalog.yaml for ${REPO_NAME}"
 
           # Push the branch
@@ -132,6 +144,11 @@ jobs:
           BRANCH_NAME="${{ steps.create-catalog.outputs.branch }}"
           DEFAULT_BRANCH="${{ steps.default-branch.outputs.branch }}"
           CATALOG_PATH="${{ steps.create-catalog.outputs.catalog_path }}"
+          
+          # Default to catalog.yaml if CATALOG_PATH is empty
+          if [ -z "${CATALOG_PATH}" ]; then
+            CATALOG_PATH="catalog.yaml"
+          fi
 
           # Create PR using GitHub CLI
           PR_BODY="This PR adds a Backstage catalog.yaml file for ${REPO_NAME}.
