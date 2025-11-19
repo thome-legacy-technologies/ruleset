@@ -94,10 +94,10 @@ jobs:
 
           # Create catalog.yaml with provided content or default template
           if [ -n "${{ inputs.catalog_content }}" ]; then
-            echo "${{ inputs.catalog_content }}" > ${CATALOG_PATH}
+            echo "${{ inputs.catalog_content }}" > "${CATALOG_PATH}"
           else
             # Create default catalog.yaml content
-            cat > ${CATALOG_PATH} <<EOF
+            cat > "${CATALOG_PATH}" <<EOF
           apiVersion: backstage.io/v1alpha1
           kind: Component
           metadata:
@@ -113,7 +113,7 @@ jobs:
           fi
 
           # Add and commit the file
-          git add ${CATALOG_PATH}
+          git add "${CATALOG_PATH}"
           git commit -m "Add Backstage catalog.yaml for ${REPO_NAME}"
 
           # Push the branch
