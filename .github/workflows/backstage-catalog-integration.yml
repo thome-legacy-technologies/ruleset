@@ -54,6 +54,11 @@ jobs:
         run: |
           DEFAULT_BRANCH="${{ steps.default-branch.outputs.branch }}"
           CATALOG_PATH="${{ inputs.catalog_file_path }}"
+          
+          # Default to catalog.yaml if CATALOG_PATH is empty
+          if [ -z "${CATALOG_PATH}" ]; then
+            CATALOG_PATH="catalog.yaml"
+          fi
 
           # Checkout the default branch to check for catalog file
           git checkout ${DEFAULT_BRANCH}
@@ -74,6 +79,12 @@ jobs:
           REPO_NAME="${GITHUB_REPOSITORY##*/}"
           BRANCH_NAME="${REPO_NAME}-backstage-integration"
           CATALOG_PATH="${{ inputs.catalog_file_path }}"
+          
+          # Default to catalog.yaml if CATALOG_PATH is empty
+          if [ -z "${CATALOG_PATH}" ]; then
+            CATALOG_PATH="catalog.yaml"
+          fi
+          
           DEFAULT_BRANCH="${{ steps.default-branch.outputs.branch }}"
 
           # Configure git
@@ -131,6 +142,11 @@ jobs:
           BRANCH_NAME="${{ steps.create-catalog.outputs.branch }}"
           DEFAULT_BRANCH="${{ steps.default-branch.outputs.branch }}"
           CATALOG_PATH="${{ steps.create-catalog.outputs.catalog_path }}"
+          
+          # Default to catalog.yaml if CATALOG_PATH is empty
+          if [ -z "${CATALOG_PATH}" ]; then
+            CATALOG_PATH="catalog.yaml"
+          fi
 
           # Create PR using GitHub CLI
           PR_BODY="This PR adds a Backstage catalog.yaml file for ${REPO_NAME}.
